@@ -1,3 +1,5 @@
 temp/
 lib/
-
+lib/*
+objs/
+objs/*

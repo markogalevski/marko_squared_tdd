@@ -85,3 +85,88 @@ TEST(StateMachine, DeadEndResultsInTurnAround)
   LONGS_EQUAL(STATE_TURNING_AROUND, markobot->current_state);
   POINTERS_EQUAL(sm_turning_around, markobot->state_method);
 }
+
+TEST(StateMachine, FinishingLeftTurnResetsStateToForward)
+{
+  LEFT_SENSOR_INTERRUPT();
+  sm_state_transition(markobot);
+  robot_run(markobot);
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_FORWARD, markobot->current_state);
+  POINTERS_EQUAL(sm_forward, markobot->state_method);
+}
+
+TEST(StateMachine, FinishingRightTurnResetsStateToForward)
+{
+  RIGHT_SENSOR_INTERRUPT();
+  sm_state_transition(markobot);
+  robot_run(markobot);
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_FORWARD, markobot->current_state);
+  POINTERS_EQUAL(sm_forward, markobot->state_method);
+}
+
+TEST(StateMachine, FinishingUTurnResetsStateToForward)
+{
+  FRONT_SENSOR_INTERRUPT();
+  sm_state_transition(markobot);
+  robot_run(markobot);
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_FORWARD, markobot->current_state);
+  POINTERS_EQUAL(sm_forward, markobot->state_method);
+}
+
+TEST(StateMachine, AlwaysMeasureStateEveryTimerInterrupt)
+{
+
+  MEASURE_TIMER_INTERRUPT();
+  LEFT_SENSOR_INTERRUPT();
+  RIGHT_SENSOR_INTERRUPT();
+  FRONT_SENSOR_INTERRUPT();
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_MEASURE, markobot->current_state);
+  POINTERS_EQUAL(sm_mapping_measure, markobot->state_method);
+}
+
+TEST(StateMachine, MeasurementTransitionsIntoDeadReckoning)
+{
+  MEASURE_TIMER_INTERRUPT();
+  sm_state_transition(markobot);
+  robot_run(markobot);
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_DEAD_RECKONING, markobot->current_state);
+  POINTERS_EQUAL(sm_dead_reckoning, markobot->state_method);
+}
+
+TEST(StateMachine, DeadReckoningTransitionsIntoMovingForward)
+{
+  MEASURE_TIMER_INTERRUPT();
+  sm_state_transition(markobot);
+  robot_run(markobot);
+  sm_state_transition(markobot);
+  robot_run(markobot);
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_FORWARD, markobot->current_state);
+  POINTERS_EQUAL(sm_forward, markobot->state_method);
+}
+
+TEST(StateMachine, FloorInterruptStops)
+{
+  FLOOR_SENSOR_INTERRUPT();
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_STOP, markobot->current_state);
+  POINTERS_EQUAL(sm_stop, markobot->state_method);
+}
+
+TEST(StateMachine, FloorInterruptIsKing)
+{
+
+  MEASURE_TIMER_INTERRUPT();
+  FLOOR_SENSOR_INTERRUPT();
+  LEFT_SENSOR_INTERRUPT();
+  RIGHT_SENSOR_INTERRUPT();
+  FRONT_SENSOR_INTERRUPT();
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_STOP, markobot->current_state);
+  POINTERS_EQUAL(sm_stop, markobot->state_method);
+}

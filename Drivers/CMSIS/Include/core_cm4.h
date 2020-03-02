@@ -31,6 +31,10 @@
 #ifndef __CORE_CM4_H_GENERIC
 #define __CORE_CM4_H_GENERIC
 
+#ifndef EXTERN
+#define EXTERN extern
+#endif
+
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -1322,8 +1326,8 @@ typedef struct
   __IOM uint32_t FPCCR;                  /*!< Offset: 0x004 (R/W)  Floating-Point Context Control Register */
   __IOM uint32_t FPCAR;                  /*!< Offset: 0x008 (R/W)  Floating-Point Context Address Register */
   __IOM uint32_t FPDSCR;                 /*!< Offset: 0x00C (R/W)  Floating-Point Default Status Control Register */
-  __IM  uint32_t MVFR0;                  /*!< Offset: 0x010 (R/ )  Media and FP Feature Register 0 */
-  __IM  uint32_t MVFR1;                  /*!< Offset: 0x014 (R/ )  Media and FP Feature Register 1 */
+    uint32_t MVFR0;                  /*!< Offset: 0x010 (R/ )  Media and FP Feature Register 0 */
+    uint32_t MVFR1;                  /*!< Offset: 0x014 (R/ )  Media and FP Feature Register 1 */
 } FPU_Type;
 
 /* Floating-Point Context Control Register Definitions */
@@ -1560,22 +1564,23 @@ typedef struct
 #define NVIC_BASE           (SCS_BASE +  0x0100UL)                    /*!< NVIC Base Address */
 #define SCB_BASE            (SCS_BASE +  0x0D00UL)                    /*!< System Control Block Base Address */
 
-#define SCnSCB              ((SCnSCB_Type    *)     SCS_BASE      )   /*!< System control Register not in SCB */
-#define SCB                 ((SCB_Type       *)     SCB_BASE      )   /*!< SCB configuration struct */
-#define SysTick             ((SysTick_Type   *)     SysTick_BASE  )   /*!< SysTick configuration struct */
-#define NVIC                ((NVIC_Type      *)     NVIC_BASE     )   /*!< NVIC configuration struct */
-#define ITM                 ((ITM_Type       *)     ITM_BASE      )   /*!< ITM configuration struct */
-#define DWT                 ((DWT_Type       *)     DWT_BASE      )   /*!< DWT configuration struct */
-#define TPI                 ((TPI_Type       *)     TPI_BASE      )   /*!< TPI configuration struct */
-#define CoreDebug           ((CoreDebug_Type *)     CoreDebug_BASE)   /*!< Core Debug configuration struct */
+EXTERN SCnSCB_Type *SCnSCB;
+EXTERN SCB_Type *SCB;
+EXTERN SysTick_Type *SysTick;
+EXTERN NVIC_Type *NVIC;
+EXTERN ITM_Type *ITM;
+EXTERN DWT_Type *DWT;
+EXTERN TPI_Type *TPI;
+EXTERN CoreDebug_Type *CoreDebug;
 
 #if defined (__MPU_PRESENT) && (__MPU_PRESENT == 1U)
   #define MPU_BASE          (SCS_BASE +  0x0D90UL)                    /*!< Memory Protection Unit */
-  #define MPU               ((MPU_Type       *)     MPU_BASE      )   /*!< Memory Protection Unit */
+  EXTERN MPU_Type *MPU;
 #endif
 
 #define FPU_BASE            (SCS_BASE +  0x0F30UL)                    /*!< Floating Point Unit */
-#define FPU                 ((FPU_Type       *)     FPU_BASE      )   /*!< Floating Point Unit */
+EXTERN FPU_Type *FPU;
+//#define FPU                 ((FPU_Type       *)     FPU_BASE      )   /*!< Floating Point Unit */
 
 /*@} */
 

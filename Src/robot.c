@@ -17,13 +17,8 @@ static void sm_solving(robot_t *robot);
 
 static void sm_solving_complete(robot_t *robot);
 
-static void sm_stop(robot_t *robot);
-
 static void sm_racing(robot_t *robot);
 
-static void sm_mapping_measure(robot_t *robot);
-
-static void sm_dead_reckoning(robot_t *robot);
 
 static void robot_orientation_incr_cw(robot_t *);
 static void robot_orientation_incr_ccw(robot_t *);
@@ -86,8 +81,8 @@ void sm_forward(robot_t *robot)
 
 void sm_turning_left(robot_t *robot)
 {
-	NVIC_DisableIRQ(I2C2_EV_IRQn);
 
+	/*
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
 	uint32_t rightMotor_start = robot_read_encoder(ENCODER_R);
 	uint32_t rightMotor_current = rightMotor_start;
@@ -99,18 +94,19 @@ void sm_turning_left(robot_t *robot)
 	}
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
 	robot_orientation_incr_ccw(robot);
+
+	reset_reference_encoder_values();
+	*/
 	if (robot->next_state != STATE_STOP)
 	{
 		robot->next_state = STATE_FORWARD;
 	}
-	reset_reference_encoder_values();
-	NVIC_EnableIRQ(I2C2_EV_IRQn);
+
 }
 
 void sm_turning_right(robot_t *robot)
 {
-	NVIC_DisableIRQ(I2C2_EV_IRQn);
-
+/*
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
 	uint32_t leftMotor_start = robot_read_encoder(ENCODER_L);
 	uint32_t leftMotor_current = leftMotor_start;
@@ -122,18 +118,19 @@ void sm_turning_right(robot_t *robot)
 	}
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
 	robot_orientation_incr_cw(robot);
+
+	reset_reference_encoder_values();
+*/
 	if (robot->next_state != STATE_STOP)
 	{
 		robot->next_state = STATE_FORWARD;
 	}
-	reset_reference_encoder_values();
-
-	NVIC_EnableIRQ(I2C2_EV_IRQn);
 
 }
 
 void sm_turning_around(robot_t *robot)
 {
+  /*
 	NVIC_DisableIRQ(I2C2_EV_IRQn);
 
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
@@ -148,12 +145,15 @@ void sm_turning_around(robot_t *robot)
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
 	robot_orientation_incr_ccw(robot);
 	robot_orientation_incr_ccw(robot);
+
+		reset_reference_encoder_values();
+	NVIC_EnableIRQ(I2C2_EV_IRQn);
+   */
 	if(robot->next_state != STATE_STOP)
 	{
 		robot->next_state = STATE_FORWARD;
 	}
-	reset_reference_encoder_values();
-	NVIC_EnableIRQ(I2C2_EV_IRQn);
+
 
 }
 
@@ -169,7 +169,7 @@ static void sm_solving_complete(robot_t *robot)
 	HAL_GPIO_WritePin(YELLOW_LED_GPIO_Port, YELLOW_LED_Pin, GPIO_PIN_SET);
 }
 
-static void sm_stop(robot_t *robot)
+void sm_stop(robot_t *robot)
 {
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
 	HAL_GPIO_TogglePin(YELLOW_LED_GPIO_Port, YELLOW_LED_Pin);
@@ -181,8 +181,9 @@ static void sm_racing(robot_t *robot)
 
 }
 
-static void sm_dead_reckoning(robot_t *robot)
+void sm_dead_reckoning(robot_t *robot)
 {
+/*
 	uint32_t currRightEncoder = robot_read_encoder(ENCODER_R);
 	uint32_t differenceRight = currRightEncoder - referenceRightEncoder;
 	uint32_t cell_diff = CONVERT_TO_CELL(differenceRight);
@@ -202,15 +203,15 @@ static void sm_dead_reckoning(robot_t *robot)
 	{
 		robot->x_location -= cell_diff;
 	}
-
+*/
 	if (robot->next_state != STATE_STOP)
 	{
-		robot->next_state = STATE_MEASURE;
+		robot->next_state = STATE_FORWARD;
 	}
 
 }
 
-static void sm_mapping_measure(robot_t *robot)
+void sm_mapping_measure(robot_t *robot)
 {
 	/**
 	 * Sensor Reading Goes Here
@@ -219,7 +220,7 @@ static void sm_mapping_measure(robot_t *robot)
 	 * Place data in correct matrix location
 	 */
 
-	robot->next_state = STATE_FORWARD;
+	robot->next_state = STATE_DEAD_RECKONING;
 }
 
 static uint32_t robot_convert_encoder_data(robot_t * robot, uint32_t currLeftData, uint32_t currRightData)

@@ -46,10 +46,15 @@ robot_t *robot_create(void);
 void robot_run(robot_t *robot);
 void robot_destroy(robot_t *robot);
 void sm_state_transition(robot_t *robot);
+void sm_power_on(robot_t *robot);
 void sm_forward(robot_t *robot);
 void sm_turning_left(robot_t *robot);
 void sm_turning_right(robot_t *robot);
 void sm_turning_around(robot_t *robot);
-void sm_power_on(robot_t *robot);
+void sm_mapping_measure(robot_t *robot);
+void sm_dead_reckoning(robot_t *robot);
+void sm_stop(robot_t *robot);
+
+
 
 #endif
