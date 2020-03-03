@@ -160,7 +160,6 @@ TEST(StateMachine, FloorInterruptStops)
 
 TEST(StateMachine, FloorInterruptIsKing)
 {
-
   MEASURE_TIMER_INTERRUPT();
   FLOOR_SENSOR_INTERRUPT();
   LEFT_SENSOR_INTERRUPT();
@@ -170,3 +169,37 @@ TEST(StateMachine, FloorInterruptIsKing)
   LONGS_EQUAL(STATE_STOP, markobot->current_state);
   POINTERS_EQUAL(sm_stop, markobot->state_method);
 }
+
+TEST(StateMachine, SecondButtonPressTriggersSolvingAlgorithm)
+{
+  FLOOR_SENSOR_INTERRUPT();
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_STOP, markobot->current_state);
+  POINTERS_EQUAL(sm_stop, markobot->state_method);
+  BUTTON_PRESS();
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_SOLVING, markobot->current_state);
+  POINTERS_EQUAL(sm_solving, markobot->state_method);
+}
+TEST(StateMachine, SolvingAlgorithmTransitionsIntoIdle)
+{
+  FLOOR_SENSOR_INTERRUPT();
+  sm_state_transition(markobot);
+  BUTTON_PRESS();
+  sm_state_transition(markobot);
+  robot_run(markobot);
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_SOLVING_COMPLETE, markobot->current_state);
+  POINTERS_EQUAL(sm_solving_complete, markobot->state_method);
+}
+
+TEST(StateMachine, ThirdButtonPressTriggersRacingStates)
+{
+  markobot->next_state = STATE_SOLVING_COMPLETE;
+  sm_state_transition(markobot);
+  BUTTON_PRESS();
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_RACING, markobot->current_state);
+  POINTERS_EQUAL(sm_racing, markobot->state_method);
+}
+

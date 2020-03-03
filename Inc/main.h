@@ -29,11 +29,11 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
-#include "robot.h"
-#include "pinout.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "pinout.h"
+#include "robot.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

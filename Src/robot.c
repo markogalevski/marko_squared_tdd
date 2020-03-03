@@ -12,14 +12,6 @@ static volatile uint32_t *const encoder_contents[NUM_ENCODERS] =
 	(uint32_t *) TIM3_BASE + 0x24UL, (uint32_t *) TIM4_BASE + 0x24UL
 };
 
-
-static void sm_solving(robot_t *robot);
-
-static void sm_solving_complete(robot_t *robot);
-
-static void sm_racing(robot_t *robot);
-
-
 static void robot_orientation_incr_cw(robot_t *);
 static void robot_orientation_incr_ccw(robot_t *);
 static uint32_t robot_read_encoder(encoder_t encoder);
@@ -29,6 +21,7 @@ static uint32_t referenceLeftEncoder = 0;
 static uint32_t referenceRightEncoder = 0;
 
 static void reset_reference_encoder_values(void);
+
 
 static state_method_t state_methods[NUM_STATES] =
 {
@@ -61,6 +54,7 @@ void robot_destroy(robot_t *robot)
 {
   free(robot);
 }
+
 
 void sm_state_transition(robot_t *robot)
 {
@@ -157,30 +151,6 @@ void sm_turning_around(robot_t *robot)
 
 }
 
-static void sm_solving(robot_t *robot)
-{
-	/**
-	 * Here's the entire maze solving algorithm. It should probably call a function defined in an external file
-	 */
-}
-
-static void sm_solving_complete(robot_t *robot)
-{
-	HAL_GPIO_WritePin(YELLOW_LED_GPIO_Port, YELLOW_LED_Pin, GPIO_PIN_SET);
-}
-
-void sm_stop(robot_t *robot)
-{
-	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
-	HAL_GPIO_TogglePin(YELLOW_LED_GPIO_Port, YELLOW_LED_Pin);
-	HAL_Delay(200);
-}
-
-static void sm_racing(robot_t *robot)
-{
-
-}
-
 void sm_dead_reckoning(robot_t *robot)
 {
 /*
@@ -222,6 +192,35 @@ void sm_mapping_measure(robot_t *robot)
 
 	robot->next_state = STATE_DEAD_RECKONING;
 }
+
+void sm_stop(robot_t *robot)
+{
+	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+	HAL_GPIO_TogglePin(YELLOW_LED_GPIO_Port, YELLOW_LED_Pin);
+	HAL_Delay(200);
+}
+
+void sm_solving(robot_t *robot)
+{
+	/**
+	 * Here's the entire maze solving algorithm. It should probably call a function defined in an external file
+	 */
+    robot->next_state = STATE_SOLVING_COMPLETE;
+}
+
+void sm_solving_complete(robot_t *robot)
+{
+	HAL_GPIO_WritePin(YELLOW_LED_GPIO_Port, YELLOW_LED_Pin, GPIO_PIN_SET);
+}
+
+
+void sm_racing(robot_t *robot)
+{
+
+}
+
+
+
 
 static uint32_t robot_convert_encoder_data(robot_t * robot, uint32_t currLeftData, uint32_t currRightData)
 {
