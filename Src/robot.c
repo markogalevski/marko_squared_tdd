@@ -2,6 +2,11 @@
 #include "robot.h"
 #include "pinout.h"
 
+#ifdef TESTING_MODE
+#define STATIC
+#else
+#define STATIC static
+#endif
 
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
@@ -22,16 +27,6 @@ static uint32_t referenceRightEncoder = 0;
 
 static void reset_reference_encoder_values(void);
 
-
-static state_method_t state_methods[NUM_STATES] =
-{
-	(state_method_t) sm_forward, (state_method_t) sm_turning_left,
-	(state_method_t) sm_turning_right, (state_method_t) sm_turning_around,
-	(state_method_t) sm_solving, (state_method_t) sm_solving_complete,
-	(state_method_t) sm_stop, (state_method_t) sm_racing,
-	(state_method_t) sm_mapping_measure, (state_method_t) sm_dead_reckoning,
-	(state_method_t) sm_power_on
-};
 
 robot_t *robot_create(void)
 {
@@ -56,24 +51,20 @@ void robot_destroy(robot_t *robot)
 }
 
 
-void sm_state_transition(robot_t *robot)
-{
-	robot->current_state = robot->next_state;
-	robot->state_method = state_methods[robot->current_state];
-}
 
-void sm_power_on(robot_t *robot)
+
+STATIC void sm_power_on(robot_t *robot)
 {
 
 }
-void sm_forward(robot_t *robot)
+STATIC void sm_forward(robot_t *robot)
 {
 	HAL_GPIO_WritePin(RIGHT_MOTOR_REVERSE_GPIO_Port, RIGHT_MOTOR_REVERSE_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(LEFT_MOTOR_REVERSE_GPIO_Port, LEFT_MOTOR_REVERSE_Pin, GPIO_PIN_RESET);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 }
 
-void sm_turning_left(robot_t *robot)
+STATIC void sm_turning_left(robot_t *robot)
 {
 
 	/*
@@ -98,7 +89,7 @@ void sm_turning_left(robot_t *robot)
 
 }
 
-void sm_turning_right(robot_t *robot)
+STATIC void sm_turning_right(robot_t *robot)
 {
 /*
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
@@ -122,7 +113,7 @@ void sm_turning_right(robot_t *robot)
 
 }
 
-void sm_turning_around(robot_t *robot)
+STATIC void sm_turning_around(robot_t *robot)
 {
   /*
 	NVIC_DisableIRQ(I2C2_EV_IRQn);
@@ -151,7 +142,7 @@ void sm_turning_around(robot_t *robot)
 
 }
 
-void sm_dead_reckoning(robot_t *robot)
+STATIC void sm_dead_reckoning(robot_t *robot)
 {
 /*
 	uint32_t currRightEncoder = robot_read_encoder(ENCODER_R);
@@ -181,7 +172,7 @@ void sm_dead_reckoning(robot_t *robot)
 
 }
 
-void sm_mapping_measure(robot_t *robot)
+STATIC void sm_mapping_measure(robot_t *robot)
 {
 	/**
 	 * Sensor Reading Goes Here
@@ -193,14 +184,14 @@ void sm_mapping_measure(robot_t *robot)
 	robot->next_state = STATE_DEAD_RECKONING;
 }
 
-void sm_stop(robot_t *robot)
+STATIC void sm_stop(robot_t *robot)
 {
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
 	HAL_GPIO_TogglePin(YELLOW_LED_GPIO_Port, YELLOW_LED_Pin);
 	HAL_Delay(200);
 }
 
-void sm_solving(robot_t *robot)
+STATIC void sm_solving(robot_t *robot)
 {
 	/**
 	 * Here's the entire maze solving algorithm. It should probably call a function defined in an external file
@@ -208,19 +199,33 @@ void sm_solving(robot_t *robot)
     robot->next_state = STATE_SOLVING_COMPLETE;
 }
 
-void sm_solving_complete(robot_t *robot)
+STATIC void sm_solving_complete(robot_t *robot)
 {
 	HAL_GPIO_WritePin(YELLOW_LED_GPIO_Port, YELLOW_LED_Pin, GPIO_PIN_SET);
 }
 
 
-void sm_racing(robot_t *robot)
+STATIC void sm_racing(robot_t *robot)
 {
 
 }
 
+static state_method_t state_methods[NUM_STATES] =
+{
+	(state_method_t) sm_forward, (state_method_t) sm_turning_left,
+	(state_method_t) sm_turning_right, (state_method_t) sm_turning_around,
+	(state_method_t) sm_solving, (state_method_t) sm_solving_complete,
+	(state_method_t) sm_stop, (state_method_t) sm_racing,
+	(state_method_t) sm_mapping_measure, (state_method_t) sm_dead_reckoning,
+	(state_method_t) sm_power_on
+};
 
 
+void sm_state_transition(robot_t *robot)
+{
+	robot->current_state = robot->next_state;
+	robot->state_method = state_methods[robot->current_state];
+}
 
 static uint32_t robot_convert_encoder_data(robot_t * robot, uint32_t currLeftData, uint32_t currRightData)
 {
@@ -252,3 +257,4 @@ static void robot_orientation_incr_ccw(robot_t *robot)
 		robot->orientation = WEST;
 		}
 }
+

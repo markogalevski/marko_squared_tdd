@@ -46,6 +46,10 @@ robot_t *robot_create(void);
 void robot_run(robot_t *robot);
 void robot_destroy(robot_t *robot);
 
+
+#define TESTING_MODE
+
+#ifdef TESTING_MODE
 void sm_state_transition(robot_t *robot);
 void sm_power_on(robot_t *robot);
 void sm_forward(robot_t *robot);
@@ -58,6 +62,6 @@ void sm_stop(robot_t *robot);
 void sm_solving(robot_t *robot);
 void sm_solving_complete(robot_t *robot);
 void sm_racing(robot_t *robot);
-
+#endif
 
 #endif
