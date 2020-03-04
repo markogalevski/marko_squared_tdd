@@ -1,12 +1,13 @@
 
-#define EXTERN
-
 #include "main.h"
+
 #include "stm32f4xx_it.h"
 
 #include "CppUTest/TestHarness.h"
 
+
 robot_t *markobot;
+
 
 TEST_GROUP(StateMachine)
 {
@@ -23,6 +24,8 @@ TEST_GROUP(StateMachine)
    robot_destroy(markobot);
   }
 };
+
+
 
 TEST(StateMachine, InitCreatesEmptyBot)
 {
@@ -181,6 +184,7 @@ TEST(StateMachine, SecondButtonPressTriggersSolvingAlgorithm)
   LONGS_EQUAL(STATE_SOLVING, markobot->current_state);
   POINTERS_EQUAL(sm_solving, markobot->state_method);
 }
+
 TEST(StateMachine, SolvingAlgorithmTransitionsIntoIdle)
 {
   FLOOR_SENSOR_INTERRUPT();
@@ -202,4 +206,7 @@ TEST(StateMachine, ThirdButtonPressTriggersRacingStates)
   LONGS_EQUAL(STATE_RACING, markobot->current_state);
   POINTERS_EQUAL(sm_racing, markobot->state_method);
 }
+
+
+
 

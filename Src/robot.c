@@ -1,6 +1,4 @@
-#include "stm32f4xx_hal.h"
-#include "robot.h"
-#include "pinout.h"
+#include "main.h"
 
 #ifdef TESTING_MODE
 #define STATIC
@@ -60,7 +58,7 @@ STATIC void sm_power_on(robot_t *robot)
 STATIC void sm_forward(robot_t *robot)
 {
 	HAL_GPIO_WritePin(RIGHT_MOTOR_REVERSE_GPIO_Port, RIGHT_MOTOR_REVERSE_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(LEFT_MOTOR_REVERSE_GPIO_Port, LEFT_MOTOR_REVERSE_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LEFT_MOTOR_REVERSE_GPIO_Port, LEFT_MOTOR_REVERSE_Pin, GPIO_PIN_SET);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 }
 
@@ -139,7 +137,18 @@ STATIC void sm_turning_around(robot_t *robot)
 		robot->next_state = STATE_FORWARD;
 	}
 
+}
 
+STATIC void sm_mapping_measure(robot_t *robot)
+{
+	/**
+	 * Sensor Reading Goes Here
+	 */
+	/**
+	 * Place data in correct matrix location
+	 */
+
+	robot->next_state = STATE_DEAD_RECKONING;
 }
 
 STATIC void sm_dead_reckoning(robot_t *robot)
@@ -172,17 +181,7 @@ STATIC void sm_dead_reckoning(robot_t *robot)
 
 }
 
-STATIC void sm_mapping_measure(robot_t *robot)
-{
-	/**
-	 * Sensor Reading Goes Here
-	 */
-	/**
-	 * Place data in correct matrix location
-	 */
 
-	robot->next_state = STATE_DEAD_RECKONING;
-}
 
 STATIC void sm_stop(robot_t *robot)
 {
@@ -257,4 +256,5 @@ static void robot_orientation_incr_ccw(robot_t *robot)
 		robot->orientation = WEST;
 		}
 }
+
 

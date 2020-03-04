@@ -45,8 +45,7 @@ typedef struct robot_t
 robot_t *robot_create(void);
 void robot_run(robot_t *robot);
 void robot_destroy(robot_t *robot);
-
-
+void Hardware_Setup(void);
 #define TESTING_MODE
 
 #ifdef TESTING_MODE

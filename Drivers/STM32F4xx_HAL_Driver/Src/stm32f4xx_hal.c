@@ -157,6 +157,7 @@ HAL_TickFreqTypeDef uwTickFreq = HAL_TICK_FREQ_DEFAULT;  /* 1KHz */
 HAL_StatusTypeDef HAL_Init(void)
 {
   /* Configure Flash prefetch, Instruction cache, Data cache */ 
+
 #if (INSTRUCTION_CACHE_ENABLE != 0U)
   __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
 #endif /* INSTRUCTION_CACHE_ENABLE */
@@ -170,12 +171,16 @@ HAL_StatusTypeDef HAL_Init(void)
 #endif /* PREFETCH_ENABLE */
 
   /* Set Interrupt Group Priority */
+
   HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
 
   /* Use systick as time base source and configure 1ms tick (default clock after Reset is HSI) */
+
   HAL_InitTick(TICK_INT_PRIORITY);
 
   /* Init the low level hardware */
+
+
   HAL_MspInit();
 
   /* Return function status */

@@ -18,6 +18,9 @@ CPP_PLATFORM = Gcc
 SRC_DIRS = \
 	$(PROJECT_HOME_DIR)/Src\
 	$(PROJECT_HOME_DIR)/Drivers/STM32F4xx_HAL_Driver/Src\
+	$(PROJECT_HOME_DIR)/VL53L0X_1.0.2/Api/core/src\
+ 	$(PROJECT_HOME_DIR)/VL53L0X_1.0.2/Api/platform/src\
+	
 	
 
 
@@ -32,7 +35,8 @@ INCLUDE_DIRS =\
   $(PROJECT_HOME_DIR)/Drivers/CMSIS/Include\
   $(PROJECT_HOME_DIR)/Drivers/STM32F4xx_HAL_Driver/Inc\
   $(PROJECT_HOME_DIR)/Drivers/CMSIS/Device/ST/STM32F4xx/Include\
-
+  $(PROJECT_HOME_DIR)/VL53L0X_1.0.2/Api/core/inc\
+  $(PROJECT_HOME_DIR)/VL53L0X_1.0.2/Api/platform/inc\
   
   
 

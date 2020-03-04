@@ -16,10 +16,7 @@
 //-    www.renaissancesoftware.net james@renaissancesoftware.net      
 //- ------------------------------------------------------------------
 
-
 #include "CppUTest/CommandLineTestRunner.h"
-
-
 
 int main(int ac, char** av)
 {
