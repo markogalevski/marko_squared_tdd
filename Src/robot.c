@@ -1,4 +1,9 @@
+#define EXTERN_FLAG
+#include "robot.h"
+#include "sensors.h"
 #include "main.h"
+#include "motor_controllers.h"
+#include "pinout.h"
 
 #ifdef TESTING_MODE
 #define STATIC
@@ -9,22 +14,22 @@
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
+TIM_HandleTypeDef htim5;
 
 static volatile uint32_t *const encoder_contents[NUM_ENCODERS] =
 {
-	(uint32_t *) TIM3_BASE + 0x24UL, (uint32_t *) TIM4_BASE + 0x24UL
+	(uint32_t *) &htim3.Instance, (uint32_t *) &htim4.Instance
 };
-
-static void robot_orientation_incr_cw(robot_t *);
-static void robot_orientation_incr_ccw(robot_t *);
-static uint32_t robot_read_encoder(encoder_t encoder);
-static uint32_t robot_convert_encoder_data(robot_t * robot, uint32_t currLeftData, uint32_t currRightData);
 
 static uint32_t referenceLeftEncoder = 0;
 static uint32_t referenceRightEncoder = 0;
-
+static void robot_orientation_incr_cw(robot_t *);
+static void robot_orientation_incr_ccw(robot_t *);
+static uint32_t robot_read_encoder(encoder_t encoder);
 static void reset_reference_encoder_values(void);
 
+static orientation_t increment_orientation_cw(orientation_t orientation);
+static orientation_t increment_orientation_ccw(orientation_t orientation);
 
 robot_t *robot_create(void)
 {
@@ -34,7 +39,10 @@ robot_t *robot_create(void)
   robot->x_location = 0;
   robot->y_location = 0;
   robot->state_method = sm_power_on;
-
+  for (int i = 0; i < NUM_ORIENTATIONS; i++)
+    {
+      robot->walls[i] = false;
+    }
   return(robot);
 }
 
@@ -55,31 +63,37 @@ STATIC void sm_power_on(robot_t *robot)
 {
 
 }
+
 STATIC void sm_forward(robot_t *robot)
 {
+	uint16_t left_sensor_data, right_sensor_data;
+	sensor_read(LEFT_SENSOR, &left_sensor_data);
+	sensor_read(RIGHT_SENSOR, &right_sensor_data);
+	motor_controller_centring(&htim2, right_sensor_data, left_sensor_data, CENTRING_P_GAIN);
 	HAL_GPIO_WritePin(RIGHT_MOTOR_REVERSE_GPIO_Port, RIGHT_MOTOR_REVERSE_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(LEFT_MOTOR_REVERSE_GPIO_Port, LEFT_MOTOR_REVERSE_Pin, GPIO_PIN_SET);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
 }
 
 STATIC void sm_turning_left(robot_t *robot)
 {
 
-	/*
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
-	uint32_t rightMotor_start = robot_read_encoder(ENCODER_R);
-	uint32_t rightMotor_current = rightMotor_start;
-	HAL_GPIO_WritePin(LEFT_MOTOR_REVERSE_GPIO_Port, LEFT_MOTOR_REVERSE_Pin, GPIO_PIN_SET);
+	uint32_t rightMotor_start = 0;
+	uint32_t rightMotor_current = robot_read_encoder(ENCODER_R);
+	HAL_GPIO_WritePin(LEFT_MOTOR_REVERSE_GPIO_Port, LEFT_MOTOR_REVERSE_Pin, GPIO_PIN_RESET);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 	while(rightMotor_current - rightMotor_start < ENCODER_90_TURN)
 	{
 		rightMotor_current = robot_read_encoder(ENCODER_R);
+
 	}
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
 	robot_orientation_incr_ccw(robot);
 
 	reset_reference_encoder_values();
-	*/
+
 	if (robot->next_state != STATE_STOP)
 	{
 		robot->next_state = STATE_FORWARD;
@@ -89,7 +103,7 @@ STATIC void sm_turning_left(robot_t *robot)
 
 STATIC void sm_turning_right(robot_t *robot)
 {
-/*
+
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
 	uint32_t leftMotor_start = robot_read_encoder(ENCODER_L);
 	uint32_t leftMotor_current = leftMotor_start;
@@ -103,7 +117,7 @@ STATIC void sm_turning_right(robot_t *robot)
 	robot_orientation_incr_cw(robot);
 
 	reset_reference_encoder_values();
-*/
+
 	if (robot->next_state != STATE_STOP)
 	{
 		robot->next_state = STATE_FORWARD;
@@ -113,8 +127,6 @@ STATIC void sm_turning_right(robot_t *robot)
 
 STATIC void sm_turning_around(robot_t *robot)
 {
-  /*
-	NVIC_DisableIRQ(I2C2_EV_IRQn);
 
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
 	uint32_t rightMotor_start = robot_read_encoder(ENCODER_R);
@@ -126,12 +138,12 @@ STATIC void sm_turning_around(robot_t *robot)
 		rightMotor_current = robot_read_encoder(ENCODER_R);
 	}
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+
 	robot_orientation_incr_ccw(robot);
 	robot_orientation_incr_ccw(robot);
 
-		reset_reference_encoder_values();
-	NVIC_EnableIRQ(I2C2_EV_IRQn);
-   */
+	reset_reference_encoder_values();
+
 	if(robot->next_state != STATE_STOP)
 	{
 		robot->next_state = STATE_FORWARD;
@@ -139,14 +151,33 @@ STATIC void sm_turning_around(robot_t *robot)
 
 }
 
+
+
 STATIC void sm_mapping_measure(robot_t *robot)
 {
 	/**
 	 * Sensor Reading Goes Here
 	 */
-	/**
-	 * Place data in correct matrix location
-	 */
+	uint16_t left_data, right_data, front_data;
+	uint16_t orientation_helper;
+	sensor_read(LEFT_SENSOR, &left_data);
+	sensor_read(RIGHT_SENSOR, &right_data);
+	sensor_read(FRONT_SENSOR, &front_data);
+	if(left_data < 130)
+	  {
+	    orientation_helper = (uint16_t) increment_orientation_ccw(robot->orientation);
+	    robot->walls[orientation_helper] = true;
+	  }
+	if (right_data < 130)
+	  {
+	    orientation_helper = (uint16_t) increment_orientation_cw(robot->orientation);
+	    robot->walls[orientation_helper] = true;
+	  }
+	if (front_data < 130)
+	  {
+	    orientation_helper = (uint16_t) robot->orientation;
+	    robot->walls[orientation_helper] = true;
+	  }
 
 	robot->next_state = STATE_DEAD_RECKONING;
 }
@@ -187,7 +218,7 @@ STATIC void sm_stop(robot_t *robot)
 {
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
 	HAL_GPIO_TogglePin(YELLOW_LED_GPIO_Port, YELLOW_LED_Pin);
-	HAL_Delay(200);
+	//HAL_Delay(200);
 }
 
 STATIC void sm_solving(robot_t *robot)
@@ -226,16 +257,11 @@ void sm_state_transition(robot_t *robot)
 	robot->state_method = state_methods[robot->current_state];
 }
 
-static uint32_t robot_convert_encoder_data(robot_t * robot, uint32_t currLeftData, uint32_t currRightData)
-{
-  static uint32_t prevLeftData = 0;
-  static uint32_t prevRightData = 0;
-  return(0);
-}
 
 static uint32_t robot_read_encoder(encoder_t encoder)
 {
-	return *encoder_contents[encoder];
+  TIM_TypeDef *target =(TIM_TypeDef *) encoder_contents[encoder];
+  return (target->CNT++);
 }
 
 static void reset_reference_encoder_values(void)
@@ -246,15 +272,30 @@ static void reset_reference_encoder_values(void)
 
 static void robot_orientation_incr_cw(robot_t *robot)
 {
-	robot->orientation = (robot->orientation + 1)%(NUM_ORIENTATIONS);
+	robot->orientation = increment_orientation_cw(robot->orientation);
 }
+
 
 static void robot_orientation_incr_ccw(robot_t *robot)
 {
-	if (--robot->orientation < 0)
-		{
-		robot->orientation = WEST;
-		}
+  robot->orientation = increment_orientation_ccw(robot->orientation);
+
 }
 
+static orientation_t increment_orientation_ccw(orientation_t orientation)
+{
+  if (orientation == NORTH)
+    {
+      return(WEST);
+    }
+  else
+    {
+      return(--orientation);
+    }
+}
 
+static orientation_t increment_orientation_cw(orientation_t orientation)
+{
+  return((++orientation)%(NUM_ORIENTATIONS));
+
+}

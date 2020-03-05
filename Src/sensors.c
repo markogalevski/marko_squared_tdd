@@ -1,10 +1,20 @@
 #include "sensors.h"
 
+VL53L0X_Dev_t left, front_left, front, front_right, right;
+static VL53L0X_Dev_t *sensors[NUM_SENSORS] =
+    {
+	(VL53L0X_Dev_t *)&left,
+	(VL53L0X_Dev_t *)&front_left,
+	(VL53L0X_Dev_t *)&front,
+	(VL53L0X_Dev_t *)&front_right,
+	(VL53L0X_Dev_t *)&right,
+    };
 
-int sensor_init(VL53L0X_Dev_t *devicePointer, uint8_t slave_address,
+int sensor_init(sensors_t sensor, uint8_t slave_address,
 		  uint32_t interrupt_threshold_mm, VL53L0X_GpioFunctionality interrupt_behaviour)
 {
   // Initialize Comms
+  VL53L0X_Dev_t *devicePointer = sensors[sensor];
   devicePointer->I2cDevAddr      = slave_address;
   devicePointer->comms_type      =  1;
   devicePointer->comms_speed_khz =  400;
@@ -62,9 +72,12 @@ int sensor_init(VL53L0X_Dev_t *devicePointer, uint8_t slave_address,
   return(status);
 
 }
-int sensor_read(VL53L0X_Dev_t *devicePointer, uint16_t *data)
+
+
+int sensor_read_impl(sensors_t sensor, uint16_t *data)
 {
 
+  VL53L0X_Dev_t *devicePointer = sensors[sensor];
   VL53L0X_RangingMeasurementData_t    RangingMeasurementData;
   FixPoint1616_t LimitCheckCurrent;
   int8_t status = VL53L0X_PerformSingleRangingMeasurement(devicePointer,
@@ -78,4 +91,4 @@ int sensor_read(VL53L0X_Dev_t *devicePointer, uint16_t *data)
   *data = RangingMeasurementData.RangeMilliMeter;
   return(0);
 }
-
+int (*sensor_read)(sensors_t sensor, uint16_t *data) = &sensor_read_impl;

@@ -88,7 +88,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define VL53L0X_GetI2CAccess(Dev)    /* todo mutex acquire */
 #define VL53L0X_DoneI2CAcces(Dev)    /* todo mutex release */
 
-extern I2C_HandleTypeDef hi2c2;
+I2C_HandleTypeDef hi2c2;
 
 VL53L0X_Error VL53L0X_LockSequenceAccess(VL53L0X_DEV Dev){
     VL53L0X_Error Status = VL53L0X_ERROR_NONE;

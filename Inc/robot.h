@@ -3,19 +3,25 @@
 
 #include "states.h"
 #include <stdint.h>
+#include "mapping.h"
 
-#define ENCODER_STEPS 20	//TO BEST TESTED
-#define ENCODER_360_TURN 55 //TO BE TESTED
-#define ENCODER_180_TURN ENCODER_360_TURN/2
-#define ENCODER_90_TURN ENCODER_180_TURN/2
+#define WHEEL_RADIUS_CM
+#define ENCODER_STEPS 		20	//TO BEST TESTED
+#define ENCODER_360_TURN 	120 	//TO BE TESTED
+#define ENCODER_180_TURN 	ENCODER_360_TURN/2
+#define ENCODER_90_TURN 	ENCODER_180_TURN/2
+
+
+
+
 
 #define CONVERT_TO_CELL(diff) (diff)
 
 typedef enum
 {
 	NORTH,
-	SOUTH,
 	EAST,
+	SOUTH,
 	WEST,
 	NUM_ORIENTATIONS
 }orientation_t;
@@ -39,6 +45,7 @@ typedef struct robot_t
 	uint8_t y_location;
 	state_method_t state_method;
 	orientation_t orientation;
+	bool walls[NUM_ORIENTATIONS];
 }robot_t;
 
 
@@ -61,6 +68,7 @@ void sm_stop(robot_t *robot);
 void sm_solving(robot_t *robot);
 void sm_solving_complete(robot_t *robot);
 void sm_racing(robot_t *robot);
+int motor_control_centring(uint16_t left_data, uint16_t right_data, float gain);
 #endif
 
 #endif

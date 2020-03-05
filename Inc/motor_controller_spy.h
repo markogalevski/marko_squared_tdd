@@ -1,0 +1,8 @@
+#ifndef _MOTOR_CONTROLLER_SPY_H
+#define _MOTOR_CONTROLLER_SPY_H
+
+#include "motor_controllers.h"
+
+int16_t motor_controller_spy_GetLastError();
+void update_pwm_fake(TIM_HandleTypeDef *htim, int32_t error);
+#endif

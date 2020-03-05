@@ -334,7 +334,7 @@ int32_t VL53L0X_write_multi16(uint8_t address, uint16_t index, uint8_t *pdata, i
         do
         {
 
-            status = SERIAL_COMMS_Write_UBOOT(address, 0, index, pdata, count);
+            //status = SERIAL_COMMS_Write_UBOOT(address, 0, index, pdata, count);
             // note : the field dwIndexHi is ignored. dwIndexLo will
             // contain the entire index (bits 0..15).
 
@@ -342,7 +342,7 @@ int32_t VL53L0X_write_multi16(uint8_t address, uint16_t index, uint8_t *pdata, i
 
 
     // store the page from the high byte of the index
-    cached_page = HIBYTE(index);
+   // cached_page = HIBYTE(index);
 
 
 
@@ -355,12 +355,12 @@ int32_t VL53L0X_read_multi16(uint8_t address, uint16_t index, uint8_t *pdata, in
     unsigned int retries = 3;
         do
         {
-            status = SERIAL_COMMS_Read_UBOOT(address, 0, index, pdata, count);
+           // status = SERIAL_COMMS_Read_UBOOT(address, 0, index, pdata, count);
 
         } while ((status != 0) && (retries-- > 0));
 
     // store the page from the high byte of the index
-    cached_page = HIBYTE(index);
+   // cached_page = HIBYTE(index);
 
     return status;
 }

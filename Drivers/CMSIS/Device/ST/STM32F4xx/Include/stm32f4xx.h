@@ -144,7 +144,7 @@
 #if defined(STM32F405xx)
   #include "stm32f405xx.h"
 #elif defined(STM32F415xx)
-  #include "testable_stm32f415xx.h"
+  #include "stm32f415xx.h"
 #elif defined(STM32F407xx)
   #include "stm32f407xx.h"
 #elif defined(STM32F417xx)
