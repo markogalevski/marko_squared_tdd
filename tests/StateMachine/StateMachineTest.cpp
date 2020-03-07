@@ -2,13 +2,14 @@ extern "C"
 {
 #include "robot.h"
 #include "main.h"
+#include "motor_controller_spy.h"
 }
 #include "stm32f4xx_it.h"
 
 #include "CppUTest/TestHarness.h"
 
 
-robot_t *markobot;
+extern robot_t *markobot;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
@@ -16,7 +17,7 @@ extern TIM_HandleTypeDef htim5;
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
-static void MX_TIM2_Init(void);
+extern void MX_TIM2_Init(void);
 
 TEST_GROUP(StateMachine)
 {
@@ -25,6 +26,13 @@ TEST_GROUP(StateMachine)
   {
     markobot = robot_create();
     MX_TIM2_Init();
+    MX_TIM3_Init();
+    MX_TIM4_Init();
+    MX_TIM5_Init();
+    MX_GPIO_Init();
+    UT_PTR_SET(motor_read_encoder, motor_read_encoder_fake);
+    UT_PTR_SET(mapping_create_node, mapping_create_node_fake);
+
     BUTTON_PRESS();
     sm_state_transition(markobot);
   }
@@ -32,10 +40,9 @@ TEST_GROUP(StateMachine)
   void teardown()
   {
    robot_destroy(markobot);
+   robot_cleanup();
   }
 };
-
-
 
 TEST(StateMachine, InitCreatesEmptyBot)
 {
@@ -156,7 +163,7 @@ TEST(StateMachine, FinishingUTurnUpdatesOrientation)
   LONGS_EQUAL(SOUTH, markobot->orientation);
 }
 
-TEST(StateMachine, AlwaysMeasureStateEveryTimerInterrupt)
+TEST(StateMachine, MeasurementLosesToMovementInterrupts)
 {
 
   MEASURE_TIMER_INTERRUPT();
@@ -164,8 +171,8 @@ TEST(StateMachine, AlwaysMeasureStateEveryTimerInterrupt)
   RIGHT_SENSOR_INTERRUPT();
   FRONT_SENSOR_INTERRUPT();
   sm_state_transition(markobot);
-  LONGS_EQUAL(STATE_MEASURE, markobot->current_state);
-  POINTERS_EQUAL(sm_mapping_measure, markobot->state_method);
+  LONGS_EQUAL(STATE_TURNING_LEFT, markobot->current_state);
+  POINTERS_EQUAL(sm_turning_left, markobot->state_method);
 }
 
 TEST(StateMachine, MeasurementTransitionsIntoDeadReckoning)
@@ -244,110 +251,3 @@ TEST(StateMachine, ThirdButtonPressTriggersRacingStates)
   POINTERS_EQUAL(sm_racing, markobot->state_method);
 }
 
-
-static void MX_TIM2_Init(void)
-{
-
-  /* USER CODE BEGIN TIM2_Init 0 */
-
-  /* USER CODE END TIM2_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-
-  /* USER CODE BEGIN TIM2_Init 1 */
-
-  /* USER CODE END TIM2_Init 1 */
-
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 1;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 2400;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler("HAL_TIM_Base_Init");
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler("HAL_TIM_ConfigClockSource");
-  }
-  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler("HAL_TIM_PWM_Init");
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler("HAL_TIMEx_MasterConfigSynchronization");
-  }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 799;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler("HAL_TIM_PWM_ConfigChannel");
-  }
-  /* USER CODE BEGIN TIM2_Init 2 */
-
-  /* USER CODE END TIM2_Init 2 */
-  HAL_TIM_MspPostInit(&htim2);
-
-}
-
-void Error_Handler(char *msg)
-{
-  printf("Error Called: %s", msg);
-}
-
-void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-  if(htim->Instance==TIM2)
-  {
-  /* USER CODE BEGIN TIM2_MspPostInit 0 */
-
-  /* USER CODE END TIM2_MspPostInit 0 */
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    /**TIM2 GPIO Configuration
-    PA5     ------> TIM2_CH1
-    */
-    GPIO_InitStruct.Pin = LEFT_MOTOR_PWM_PIN_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
-    HAL_GPIO_Init(LEFT_MOTOR_PWM_PIN_GPIO_Port, &GPIO_InitStruct);
-
-  /* USER CODE BEGIN TIM2_MspPostInit 1 */
-
-  /* USER CODE END TIM2_MspPostInit 1 */
-  }
-  else if(htim->Instance==TIM5)
-  {
-  /* USER CODE BEGIN TIM5_MspPostInit 0 */
-
-  /* USER CODE END TIM5_MspPostInit 0 */
-
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    /**TIM5 GPIO Configuration
-    PA0-WKUP     ------> TIM5_CH1
-    */
-    GPIO_InitStruct.Pin = RIGHT_MOTOR_PWM_PIN_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Alternate = GPIO_AF2_TIM5;
-    HAL_GPIO_Init(RIGHT_MOTOR_PWM_PIN_GPIO_Port, &GPIO_InitStruct);
-
-  /* USER CODE BEGIN TIM5_MspPostInit 1 */
-
-  /* USER CODE END TIM5_MspPostInit 1 */
-  }
-
-}

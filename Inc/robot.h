@@ -5,14 +5,6 @@
 #include <stdint.h>
 #include "mapping.h"
 
-#define WHEEL_RADIUS_CM
-#define ENCODER_STEPS 		20	//TO BEST TESTED
-#define ENCODER_360_TURN 	120 	//TO BE TESTED
-#define ENCODER_180_TURN 	ENCODER_360_TURN/2
-#define ENCODER_90_TURN 	ENCODER_180_TURN/2
-
-
-
 
 
 #define CONVERT_TO_CELL(diff) (diff)
@@ -26,12 +18,7 @@ typedef enum
 	NUM_ORIENTATIONS
 }orientation_t;
 
-typedef enum
-{
-	ENCODER_L,
-	ENCODER_R,
-	NUM_ENCODERS
-}encoder_t;
+
 
 typedef struct robot_t robot_t;
 
@@ -41,8 +28,8 @@ typedef struct robot_t
 {
 	states_t current_state;
 	states_t next_state;
-	uint8_t x_location;
-	uint8_t y_location;
+	int8_t x_location;
+	int8_t y_location;
 	state_method_t state_method;
 	orientation_t orientation;
 	bool walls[NUM_ORIENTATIONS];
@@ -52,6 +39,7 @@ typedef struct robot_t
 robot_t *robot_create(void);
 void robot_run(robot_t *robot);
 void robot_destroy(robot_t *robot);
+void robot_cleanup(void);
 void Hardware_Setup(void);
 #define TESTING_MODE
 

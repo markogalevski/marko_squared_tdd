@@ -68,7 +68,7 @@ typedef struct
 typedef enum
 {
   GPIO_PIN_RESET = 0,
-  GPIO_PIN_SET
+  GPIO_PIN_SET = 1
 }GPIO_PinState;
 /**
   * @}

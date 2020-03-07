@@ -2,6 +2,7 @@
 #define _MAPPING_H
 
 #include <stdbool.h>
+#define WALL_THRESHOLD 130
 
 typedef struct
 {
@@ -10,5 +11,18 @@ typedef struct
   bool east_wall;
   bool north_wall;
 }cell_t;
+
+typedef struct node node_t;
+
+typedef struct node
+{
+  int8_t x_coord;
+  int8_t y_coord;
+  cell_t walls;
+  node_t *prev;
+}node_t;
+extern node_t *(*mapping_create_node)(int8_t x, int8_t y, cell_t *walls, node_t *prev);
+node_t *mapping_create_node_fake(int8_t x, int8_t y, cell_t *walls, node_t *prev);
+
 
 #endif

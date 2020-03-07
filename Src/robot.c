@@ -11,25 +11,20 @@
 #define STATIC static
 #endif
 
-TIM_HandleTypeDef htim2;
-TIM_HandleTypeDef htim3;
-TIM_HandleTypeDef htim4;
-TIM_HandleTypeDef htim5;
+extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim4;
+extern TIM_HandleTypeDef htim5;
 
-static volatile uint32_t *const encoder_contents[NUM_ENCODERS] =
-{
-	(uint32_t *) &htim3.Instance, (uint32_t *) &htim4.Instance
-};
+node_t *previousNode;
 
-static uint32_t referenceLeftEncoder = 0;
-static uint32_t referenceRightEncoder = 0;
 static void robot_orientation_incr_cw(robot_t *);
 static void robot_orientation_incr_ccw(robot_t *);
-static uint32_t robot_read_encoder(encoder_t encoder);
-static void reset_reference_encoder_values(void);
 
 static orientation_t increment_orientation_cw(orientation_t orientation);
 static orientation_t increment_orientation_ccw(orientation_t orientation);
+static void refresh_walls(robot_t * robot);
+static void update_position(robot_t *robot);
 
 robot_t *robot_create(void)
 {
@@ -44,6 +39,8 @@ robot_t *robot_create(void)
       robot->walls[i] = false;
     }
   return(robot);
+  previousNode = (node_t *)malloc(sizeof(node_t));
+  previousNode->prev = NULL;
 }
 
 void robot_run(robot_t *robot)
@@ -56,12 +53,33 @@ void robot_destroy(robot_t *robot)
   free(robot);
 }
 
-
+void robot_cleanup(void)
+{
+  node_t *current_target;
+/*  if (previousNode->prev != NULL)
+    {
+      current_target = previousNode->prev;
+    }
+ /*node_t *next_target;
+  while(next_target != NULL)
+    {
+      next_target = current_target->prev;
+      if (current_target != NULL)
+	{
+	  free(current_target);
+	}
+      current_target = next_target;
+    }
+  previousNode = NULL;
+*/
+}
 
 
 STATIC void sm_power_on(robot_t *robot)
 {
-
+      motor_disable_all();
+      HAL_GPIO_TogglePin(YELLOW_LED_GPIO_Port, YELLOW_LED_Pin);
+      HAL_Delay(500);
 }
 
 STATIC void sm_forward(robot_t *robot)
@@ -69,30 +87,21 @@ STATIC void sm_forward(robot_t *robot)
 	uint16_t left_sensor_data, right_sensor_data;
 	sensor_read(LEFT_SENSOR, &left_sensor_data);
 	sensor_read(RIGHT_SENSOR, &right_sensor_data);
-	motor_controller_centring(&htim2, right_sensor_data, left_sensor_data, CENTRING_P_GAIN);
-	HAL_GPIO_WritePin(RIGHT_MOTOR_REVERSE_GPIO_Port, RIGHT_MOTOR_REVERSE_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(LEFT_MOTOR_REVERSE_GPIO_Port, LEFT_MOTOR_REVERSE_Pin, GPIO_PIN_SET);
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
+	motor_controller_forward(right_sensor_data, left_sensor_data, CENTRING_P_GAIN);
 }
 
 STATIC void sm_turning_left(robot_t *robot)
 {
 
-	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
-	uint32_t rightMotor_start = 0;
-	uint32_t rightMotor_current = robot_read_encoder(ENCODER_R);
-	HAL_GPIO_WritePin(LEFT_MOTOR_REVERSE_GPIO_Port, LEFT_MOTOR_REVERSE_Pin, GPIO_PIN_RESET);
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-	while(rightMotor_current - rightMotor_start < ENCODER_90_TURN)
-	{
-		rightMotor_current = robot_read_encoder(ENCODER_R);
+	motor_controller_coast(7.0);
+	update_position(robot);
+	previousNode = mapping_create_node(robot->x_location, robot->y_location, (cell_t *) &robot->walls, previousNode);
+	refresh_walls(robot);
+	motor_controller_in_place(LEFT_90_DEG);
 
-	}
-	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
 	robot_orientation_incr_ccw(robot);
-
-	reset_reference_encoder_values();
+	motor_reset_reference_encoder_values();
+	motor_controller_coast(7.0);
 
 	if (robot->next_state != STATE_STOP)
 	{
@@ -104,19 +113,15 @@ STATIC void sm_turning_left(robot_t *robot)
 STATIC void sm_turning_right(robot_t *robot)
 {
 
-	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
-	uint32_t leftMotor_start = robot_read_encoder(ENCODER_L);
-	uint32_t leftMotor_current = leftMotor_start;
-	HAL_GPIO_WritePin(RIGHT_MOTOR_REVERSE_GPIO_Port, RIGHT_MOTOR_REVERSE_Pin, GPIO_PIN_SET);
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-	while(leftMotor_current - leftMotor_start < ENCODER_90_TURN)
-	{
-		leftMotor_current = robot_read_encoder(ENCODER_L);
-	}
-	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
-	robot_orientation_incr_cw(robot);
+	motor_controller_coast(7.0);
+	update_position(robot);
+	previousNode = mapping_create_node(robot->x_location, robot->y_location, (cell_t *)&robot->walls, previousNode);
+	refresh_walls(robot);
+	motor_controller_in_place(RIGHT_90_DEG);
 
-	reset_reference_encoder_values();
+	robot_orientation_incr_cw(robot);
+	motor_reset_reference_encoder_values();
+	motor_controller_coast(7.0);
 
 	if (robot->next_state != STATE_STOP)
 	{
@@ -128,21 +133,11 @@ STATIC void sm_turning_right(robot_t *robot)
 STATIC void sm_turning_around(robot_t *robot)
 {
 
-	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
-	uint32_t rightMotor_start = robot_read_encoder(ENCODER_R);
-	uint32_t rightMotor_current = rightMotor_start;
-	HAL_GPIO_WritePin(LEFT_MOTOR_REVERSE_GPIO_Port, LEFT_MOTOR_REVERSE_Pin, GPIO_PIN_SET);
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-	while(rightMotor_current - rightMotor_start < ENCODER_180_TURN)
-	{
-		rightMotor_current = robot_read_encoder(ENCODER_R);
-	}
-	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
-
+	motor_controller_coast(7.0);
+	motor_controller_in_place(LEFT_180_DEG);
 	robot_orientation_incr_ccw(robot);
 	robot_orientation_incr_ccw(robot);
-
-	reset_reference_encoder_values();
+	motor_reset_reference_encoder_values();
 
 	if(robot->next_state != STATE_STOP)
 	{
@@ -155,57 +150,53 @@ STATIC void sm_turning_around(robot_t *robot)
 
 STATIC void sm_mapping_measure(robot_t *robot)
 {
-	/**
-	 * Sensor Reading Goes Here
-	 */
 	uint16_t left_data, right_data, front_data;
 	uint16_t orientation_helper;
 	sensor_read(LEFT_SENSOR, &left_data);
 	sensor_read(RIGHT_SENSOR, &right_data);
 	sensor_read(FRONT_SENSOR, &front_data);
-	if(left_data < 130)
+	if(left_data < WALL_THRESHOLD)
 	  {
 	    orientation_helper = (uint16_t) increment_orientation_ccw(robot->orientation);
 	    robot->walls[orientation_helper] = true;
 	  }
-	if (right_data < 130)
+	if (right_data < WALL_THRESHOLD)
 	  {
 	    orientation_helper = (uint16_t) increment_orientation_cw(robot->orientation);
 	    robot->walls[orientation_helper] = true;
 	  }
-	if (front_data < 130)
+	if (front_data < WALL_THRESHOLD)
 	  {
 	    orientation_helper = (uint16_t) robot->orientation;
 	    robot->walls[orientation_helper] = true;
 	  }
 
-	robot->next_state = STATE_DEAD_RECKONING;
+	if (	robot->next_state != STATE_STOP
+	    && robot->next_state != STATE_TURNING_LEFT
+	    && robot->next_state != STATE_TURNING_RIGHT
+	    && robot->next_state != STATE_TURNING_AROUND)
+	  {
+	    robot->next_state = STATE_DEAD_RECKONING;
+	  }
 }
 
 STATIC void sm_dead_reckoning(robot_t *robot)
 {
-/*
-	uint32_t currRightEncoder = robot_read_encoder(ENCODER_R);
-	uint32_t differenceRight = currRightEncoder - referenceRightEncoder;
-	uint32_t cell_diff = CONVERT_TO_CELL(differenceRight);
-	if (robot->orientation == NORTH)
-	{
-		robot->y_location += cell_diff;
-	}
-	else if (robot->orientation == SOUTH)
-	{
-		robot->y_location -= cell_diff;
-	}
-	else if (robot->orientation == EAST)
-	{
-		robot->x_location += cell_diff;
-	}
-	else
-	{
-		robot->x_location -= cell_diff;
-	}
-*/
-	if (robot->next_state != STATE_STOP)
+
+	uint32_t current_right_encoder = motor_read_encoder(ENCODER_R);
+	uint32_t difference_right = current_right_encoder - motor_read_reference_encoder(ENCODER_R);
+	if (TICKS_TO_CM(difference_right) - (float)CELL_SIZE_CM < 0.01)
+	  {
+	    update_position(robot);
+	    previousNode = mapping_create_node(robot->x_location, robot->y_location, (cell_t *)&robot->walls, previousNode);
+
+
+	  }
+
+	if (	robot->next_state != STATE_STOP
+	    && robot->next_state != STATE_TURNING_LEFT
+	    && robot->next_state != STATE_TURNING_RIGHT
+	    && robot->next_state != STATE_TURNING_AROUND)
 	{
 		robot->next_state = STATE_FORWARD;
 	}
@@ -216,15 +207,15 @@ STATIC void sm_dead_reckoning(robot_t *robot)
 
 STATIC void sm_stop(robot_t *robot)
 {
-	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+	motor_disable_all();
 	HAL_GPIO_TogglePin(YELLOW_LED_GPIO_Port, YELLOW_LED_Pin);
-	//HAL_Delay(200);
+	HAL_Delay(200);
 }
 
 STATIC void sm_solving(robot_t *robot)
 {
 	/**
-	 * Here's the entire maze solving algorithm. It should probably call a function defined in an external file
+	 * Here's the entire maze solving algorithm. It should call a function defined in an external file
 	 */
     robot->next_state = STATE_SOLVING_COMPLETE;
 }
@@ -258,17 +249,8 @@ void sm_state_transition(robot_t *robot)
 }
 
 
-static uint32_t robot_read_encoder(encoder_t encoder)
-{
-  TIM_TypeDef *target =(TIM_TypeDef *) encoder_contents[encoder];
-  return (target->CNT++);
-}
 
-static void reset_reference_encoder_values(void)
-{
-	referenceLeftEncoder = robot_read_encoder(ENCODER_L);
-	referenceRightEncoder = robot_read_encoder(ENCODER_R);
-}
+
 
 static void robot_orientation_incr_cw(robot_t *robot)
 {
@@ -298,4 +280,32 @@ static orientation_t increment_orientation_cw(orientation_t orientation)
 {
   return((++orientation)%(NUM_ORIENTATIONS));
 
+}
+
+static void refresh_walls(robot_t * robot)
+{
+  for (int i = 0; i < NUM_ORIENTATIONS;i++)
+    {
+      robot->walls[i] = false;
+    }
+}
+
+static void update_position(robot_t *robot)
+{
+  if (robot->orientation == NORTH)
+    {
+      robot->y_location += 1;
+    }
+  else if (robot->orientation == EAST)
+    {
+      robot->x_location += 1;
+    }
+  else if (robot->orientation == SOUTH)
+    {
+      robot->y_location -= 1;
+    }
+  else if (robot->orientation == WEST)
+    {
+      robot->x_location -= 1;
+    }
 }

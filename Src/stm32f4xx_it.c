@@ -218,7 +218,9 @@ void EXTI2_IRQHandler(void)
   /* USER CODE BEGIN EXTI2_IRQn 0 */
   if(markobot->next_state != STATE_STOP)
     {
-    if (markobot->current_state == STATE_FORWARD && markobot->next_state != STATE_MEASURE)
+    if (markobot->current_state == STATE_FORWARD
+	|| markobot->current_state == STATE_MEASURE
+	|| markobot->current_state == STATE_DEAD_RECKONING)
       {
 	markobot->next_state = STATE_TURNING_LEFT;
       }
@@ -233,12 +235,12 @@ void EXTI3_IRQHandler(void)
   /* USER CODE BEGIN EXTI2_IRQn 0 */
   if (markobot->next_state != STATE_STOP)
     {
-      if (markobot->next_state != STATE_MEASURE)
+      if (	(markobot->current_state == STATE_FORWARD
+		|| markobot->current_state == STATE_MEASURE
+		|| markobot->current_state == STATE_DEAD_RECKONING)
+	  && markobot->next_state != STATE_TURNING_LEFT)
 	{
-	  if (markobot->current_state == STATE_FORWARD && markobot->next_state != STATE_TURNING_LEFT)
-	    {
 	      markobot->next_state = STATE_TURNING_RIGHT;
-	    }
 	}
     }
   /* USER CODE END EXTI2_IRQn 0 */
@@ -278,13 +280,15 @@ void EXTI15_10_IRQHandler(void)
   /* USER CODE BEGIN EXTI15_10_IRQn 0 */
   if (markobot->next_state != STATE_STOP)
     {
-      if (markobot->next_state != STATE_MEASURE)
-	{
-	  if(markobot->current_state == STATE_FORWARD
-	      && (markobot->next_state != STATE_TURNING_LEFT || markobot->next_state != STATE_TURNING_RIGHT))
+
+	  if(	(markobot->current_state == STATE_FORWARD
+		|| markobot->current_state == STATE_MEASURE
+		|| markobot->current_state == STATE_DEAD_RECKONING)
+		  && (markobot->next_state != STATE_TURNING_LEFT
+		  && markobot->next_state != STATE_TURNING_RIGHT))
 	    {
 	      markobot->next_state = STATE_TURNING_AROUND;
-	    }
+
   /* USER CODE END EXTI15_10_IRQn 0 */
 
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */

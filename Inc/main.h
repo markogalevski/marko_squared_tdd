@@ -54,11 +54,19 @@ extern "C" {
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
+
 /* Exported functions prototypes ---------------------------------------------*/
-void Error_Handler(char *msg);
+void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void MX_GPIO_Init(void);
+void MX_I2C2_Init(void);
+void MX_TIM2_Init(void);
+void MX_TIM3_Init(void);
+void MX_TIM4_Init(void);
+void MX_UART4_Init(void);
+void MX_TIM5_Init(void);
+void MX_TIM6_Init(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
