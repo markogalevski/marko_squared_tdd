@@ -6,7 +6,6 @@
 #include "mapping.h"
 
 
-
 #define CONVERT_TO_CELL(diff) (diff)
 
 typedef enum

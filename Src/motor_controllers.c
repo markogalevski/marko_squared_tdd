@@ -96,7 +96,7 @@ uint32_t (*motor_read_encoder)(encoder_t encoder) = motor_read_encoder_impl;
 
 uint32_t motor_read_reference_encoder(encoder_t encoder)
 {
-  return(reference_encoders[encoder]);
+  return(*reference_encoders[encoder]);
 }
 
 static void motor_centering(TIM_HandleTypeDef *controlled_motor, uint16_t right_data, uint16_t left_data, float gain)

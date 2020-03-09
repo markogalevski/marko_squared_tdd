@@ -1,7 +1,7 @@
 #include "motor_controller_spy.h"
 
 
-static volatile uint32_t *const encoder_contents[NUM_ENCODERS] =
+static volatile uint32_t *encoder_contents[NUM_ENCODERS] =
     {
 	(uint32_t *) &htim3.Instance, (uint32_t *) &htim4.Instance
     };
@@ -21,4 +21,13 @@ uint32_t motor_read_encoder_fake(encoder_t encoder)
 {
   TIM_TypeDef *target =(TIM_TypeDef *) encoder_contents[encoder];
   return (target->CNT++);
+}
+
+
+void motor_clear_fake_encoders(void)
+{
+  TIM_TypeDef *target =(TIM_TypeDef *) encoder_contents[ENCODER_L];
+  target->CNT = 0;
+  target = (TIM_TypeDef *) encoder_contents[ENCODER_R];
+  target->CNT = 0;
 }

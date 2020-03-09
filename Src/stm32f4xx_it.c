@@ -23,6 +23,7 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -216,33 +217,30 @@ void EXTI1_IRQHandler(void)
 void EXTI2_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI2_IRQn 0 */
-  if(markobot->next_state != STATE_STOP)
-    {
-    if (markobot->current_state == STATE_FORWARD
-	|| markobot->current_state == STATE_MEASURE
-	|| markobot->current_state == STATE_DEAD_RECKONING)
+  if (isStoppingNext(markobot))
+    return;
+
+  if (isNotTurning(markobot))
       {
 	markobot->next_state = STATE_TURNING_LEFT;
       }
   /* USER CODE END EXTI2_IRQn 0 */
   /* USER CODE BEGIN EXTI2_IRQn 1 */
-    }
   /* USER CODE END EXT2_IRQn 1 */
 }
 
 void EXTI3_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI2_IRQn 0 */
-  if (markobot->next_state != STATE_STOP)
-    {
-      if (	(markobot->current_state == STATE_FORWARD
-		|| markobot->current_state == STATE_MEASURE
-		|| markobot->current_state == STATE_DEAD_RECKONING)
-	  && markobot->next_state != STATE_TURNING_LEFT)
+  if (isStoppingNext(markobot))
+    return;
+
+      if ( isNotTurning(markobot)
+	  && isNotTurningLeftNext(markobot))
 	{
 	      markobot->next_state = STATE_TURNING_RIGHT;
 	}
-    }
+
   /* USER CODE END EXTI2_IRQn 0 */
   /* USER CODE BEGIN EXTI2_IRQn 1 */
 
@@ -267,7 +265,8 @@ void EXTI9_5_IRQHandler(void)
 		markobot->next_state = STATE_RACING;
 	}
   /* USER CODE END EXTI9_5_IRQn 0 */
-  /* USER CODE BEGIN EXTI9_5_IRQn 1 */
+  /* USER CODE BEGIN EXTI9_5_IRQn 1 */    //robot_cleanup();
+
 
   /* USER CODE END EXTI9_5_IRQn 1 */
 }
@@ -278,24 +277,21 @@ void EXTI9_5_IRQHandler(void)
 void EXTI15_10_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI15_10_IRQn 0 */
-  if (markobot->next_state != STATE_STOP)
-    {
+  if (isStoppingNext(markobot))
+      return;
 
-	  if(	(markobot->current_state == STATE_FORWARD
-		|| markobot->current_state == STATE_MEASURE
-		|| markobot->current_state == STATE_DEAD_RECKONING)
-		  && (markobot->next_state != STATE_TURNING_LEFT
-		  && markobot->next_state != STATE_TURNING_RIGHT))
+	  if(	isNotTurning(markobot)
+		  && isNotTurningLeftNext(markobot)
+		  && isNotTurningRightNext(markobot))
 	    {
 	      markobot->next_state = STATE_TURNING_AROUND;
+	    }
 
   /* USER CODE END EXTI15_10_IRQn 0 */
 
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
 
   /* USER CODE END EXTI15_10_IRQn 1 */
-	}
-    }
 }
 
 /**
@@ -317,18 +313,18 @@ void UART4_IRQHandler(void)
 void TIM6_DAC_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM6_DAC_IRQn 0 */
-  if (markobot->next_state != STATE_STOP)
-    {
+  if (isStoppingNext(markobot))
+    return;
+
 	if (markobot->current_state == STATE_FORWARD)
 	{
-		markobot->next_state = STATE_MEASURE;
+		markobot->next_state = STATE_DEAD_RECKONING;
 	}
-    }
+}
   /* USER CODE END TIM6_DAC_IRQn 0 */
   /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
 
   /* USER CODE END TIM6_DAC_IRQn 1 */
-}
 
 /* USER CODE BEGIN 1 */
 

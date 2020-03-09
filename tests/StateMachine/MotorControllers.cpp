@@ -30,13 +30,11 @@ TEST_GROUP(MotorControllerForward)
     MX_TIM5_Init();
     MX_GPIO_Init();
     UT_PTR_SET(update_pwm_value, update_pwm_fake);
-    UT_PTR_SET(mapping_create_node, mapping_create_node_fake);
 
   }
 
   void teardown()
   {
-    //robot_cleanup();
     robot_destroy(markobot);
   }
 };
@@ -90,7 +88,6 @@ TEST_GROUP(MotorControllerInPlace)
   void teardown()
   {
     robot_destroy(markobot);
-    //robot_cleanup();
   }
 
 };
@@ -157,7 +154,6 @@ TEST_GROUP(MotorControllerCoast)
 
   void teardown()
   {
-    //robot_cleanup();
   }
 };
 

@@ -3,7 +3,7 @@ extern "C"
 {
 #include "pinout.h"
 #include "robot.h"
-#include "../../Inc/sensors_fake.h"
+#include "sensors_fake.h"
 #include "main.h"
 }
 #include "stm32f4xx_it.h"
@@ -30,8 +30,8 @@ TEST_GROUP(MappingFunctionality)
   }
   void teardown()
   {
+
     robot_destroy(markobot);
-    //robot_cleanup();
   }
 };
 
@@ -100,7 +100,7 @@ TEST(MappingFunctionality, RobotCorrectlyPlacesWallsAfter90DegRotation)
   sensor_inject_fake_data(LEFT_SENSOR, 150);
   sensor_inject_fake_data(RIGHT_SENSOR, 30);
   sensor_inject_fake_data(FRONT_SENSOR, 155);
-  MEASURE_TIMER_INTERRUPT();
+  markobot->next_state = STATE_MEASURE;
   sm_state_transition(markobot);
   robot_run(markobot);
   LONGS_EQUAL(0, markobot->walls[EAST]);
@@ -116,7 +116,7 @@ TEST(MappingFunctionality, RobotCorrectlyPlacesWallsAfter90DegRotation2)
   sensor_inject_fake_data(LEFT_SENSOR, 150);
   sensor_inject_fake_data(RIGHT_SENSOR, 30);
   sensor_inject_fake_data(FRONT_SENSOR, 155);
-  MEASURE_TIMER_INTERRUPT();
+  markobot->next_state = STATE_MEASURE;
   sm_state_transition(markobot);
   robot_run(markobot);
   LONGS_EQUAL(0, markobot->walls[EAST]);
@@ -131,7 +131,7 @@ TEST(MappingFunctionality, RobotCorrectlyPlacesWallsAfter180DegRotation)
   sensor_inject_fake_data(LEFT_SENSOR, 30);
   sensor_inject_fake_data(RIGHT_SENSOR, 155);
   sensor_inject_fake_data(FRONT_SENSOR, 30);
-  MEASURE_TIMER_INTERRUPT();
+  markobot->next_state = STATE_MEASURE;
   sm_state_transition(markobot);
   robot_run(markobot);
   LONGS_EQUAL(1, markobot->walls[EAST]);
@@ -152,8 +152,46 @@ TEST_GROUP(NodeCleaning)
   }
 };
 
-TEST(NodeCleaning, CanCleanOne)
+extern node_t *newestNode;
+TEST_GROUP(MapGeneration)
 {
-  node_t *holder = mapping_create_node(5, 4, (cell_t *) &markobot->walls, NULL);
-  free(holder);
+  void setup()
+  {
+    markobot = robot_create();
+    MX_TIM2_Init();
+    MX_TIM3_Init();
+    MX_TIM4_Init();
+    MX_TIM5_Init();
+    MX_GPIO_Init();
+    UT_PTR_SET(sensor_read, sensor_read_stub);
+    BUTTON_PRESS();
+    sm_state_transition(markobot);
+  }
+   void teardown()
+   {
+     robot_destroy(markobot);
+
+   }
+};
+
+TEST(MapGeneration, NoFaultOnEmptyList)
+{
+
 }
+
+TEST(MapGeneration, DeletesSingleValidElement)
+{
+  markobot->walls[SOUTH] = true;
+  newestNode = mapping_create_node(1, 1, (cell_t *) &markobot->walls, newestNode);
+}
+
+TEST(MapGeneration, DeletesChainOfTwoElements)
+{
+  markobot->walls[SOUTH] = true;
+  newestNode = mapping_create_node(1, 1, (cell_t *) &markobot->walls, newestNode);
+  markobot->walls[SOUTH] = false;
+  markobot->walls[EAST] = true;
+  markobot->walls[WEST] = true;
+  newestNode = mapping_create_node(1, 0, (cell_t *) &markobot->walls, newestNode);
+}
+

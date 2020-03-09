@@ -3,6 +3,7 @@ extern "C"
 #include "robot.h"
 #include "main.h"
 #include "motor_controller_spy.h"
+#include "sensors_fake.h"
 }
 #include "stm32f4xx_it.h"
 
@@ -24,6 +25,8 @@ TEST_GROUP(StateMachine)
 
   void setup()
   {
+    motor_reset_reference_encoder_values();
+    motor_clear_fake_encoders();
     markobot = robot_create();
     MX_TIM2_Init();
     MX_TIM3_Init();
@@ -32,7 +35,6 @@ TEST_GROUP(StateMachine)
     MX_GPIO_Init();
     UT_PTR_SET(motor_read_encoder, motor_read_encoder_fake);
     UT_PTR_SET(mapping_create_node, mapping_create_node_fake);
-
     BUTTON_PRESS();
     sm_state_transition(markobot);
   }
@@ -40,7 +42,6 @@ TEST_GROUP(StateMachine)
   void teardown()
   {
    robot_destroy(markobot);
-   robot_cleanup();
   }
 };
 
@@ -53,6 +54,7 @@ TEST(StateMachine, InitCreatesEmptyBot)
   LONGS_EQUAL(0, markobot->y_location);
   POINTERS_EQUAL(sm_power_on, markobot->state_method);
   LONGS_EQUAL(STATE_POWER_ON, markobot->current_state);
+  robot_cleanup();
 }
 
 TEST(StateMachine, ButtonTransitionsPowerOnToMappingForward)
@@ -163,7 +165,7 @@ TEST(StateMachine, FinishingUTurnUpdatesOrientation)
   LONGS_EQUAL(SOUTH, markobot->orientation);
 }
 
-TEST(StateMachine, MeasurementLosesToMovementInterrupts)
+TEST(StateMachine, DeadReckoningLosesToMovementInterrupts)
 {
 
   MEASURE_TIMER_INTERRUPT();
@@ -175,21 +177,51 @@ TEST(StateMachine, MeasurementLosesToMovementInterrupts)
   POINTERS_EQUAL(sm_turning_left, markobot->state_method);
 }
 
-TEST(StateMachine, MeasurementTransitionsIntoDeadReckoning)
+TEST(StateMachine, TimerInterruptStartsDeadReckoning)
 {
   MEASURE_TIMER_INTERRUPT();
-  sm_state_transition(markobot);
-  robot_run(markobot);
   sm_state_transition(markobot);
   LONGS_EQUAL(STATE_DEAD_RECKONING, markobot->current_state);
   POINTERS_EQUAL(sm_dead_reckoning, markobot->state_method);
 }
 
-TEST(StateMachine, DeadReckoningTransitionsIntoMovingForward)
+TEST(StateMachine, DeadReckoningTransitionsIntoMeasurementIfPositionUpdated)
 {
   MEASURE_TIMER_INTERRUPT();
   sm_state_transition(markobot);
+  uint32_t current_encoder = motor_read_encoder(ENCODER_R);
+  uint32_t start_encoder = current_encoder;
+
+  while(current_encoder - start_encoder < CELL_SIZE_TICKS)
+    {
+      current_encoder = motor_read_encoder(ENCODER_R);
+    }
+
   robot_run(markobot);
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_MEASURE, markobot->current_state);
+  POINTERS_EQUAL(sm_mapping_measure, markobot->state_method);
+}
+
+TEST(StateMachine, MeasurementTransitionsIntoForward)
+{
+  markobot->next_state = STATE_MEASURE;
+  robot_run(markobot);
+  sm_state_transition(markobot);
+  robot_run(markobot);
+  sm_state_transition(markobot);
+  LONGS_EQUAL(STATE_FORWARD, markobot->current_state);
+  LONGS_EQUAL(sm_forward, markobot->state_method);
+}
+
+TEST(StateMachine, DeadReckoningTransitionsIntoMovingForwardIfNoUpdate)
+{
+  MEASURE_TIMER_INTERRUPT();
+  uint32_t current_encoder;
+  for (int i = 0; i < 2; i++)
+    {
+      current_encoder = motor_read_encoder(ENCODER_R);
+    }
   sm_state_transition(markobot);
   robot_run(markobot);
   sm_state_transition(markobot);
